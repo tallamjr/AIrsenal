@@ -1,0 +1,27 @@
+# This file may be used to create an environment using:
+# $ conda env create --name <env> --file <this file>
+# platform: linux-64
+name: airsenalenv
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.7
+  - numpy
+  - pandas
+  - scipy
+
+  - pip:
+    - tqdm==v4.29.1
+    - black
+    - sqlalchemy
+    - requests
+    - dateparser
+    - matplotlib
+    - bs4
+    - selenium
+    - boto3
+    - pip
+    - Cython>=0.22
+    - pystan>=2.14
