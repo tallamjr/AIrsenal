@@ -3,7 +3,6 @@ Useful functions for constructing Alexa responses.
 """
 
 import os
-import sys
 import time
 
 from sqlalchemy.orm import sessionmaker
@@ -12,6 +11,7 @@ import boto3
 
 from .utils import *
 from .fpl_team_utils import *
+
 
 def download_sqlite_file():
     """
@@ -54,7 +54,7 @@ def get_suggestions_string():
     """
     Query the suggested_transfers table and format the output.
     """
-    ##  first need to download sqlite file from S3
+    #  first need to download sqlite file from S3
 
     result = download_sqlite_file()
     if result != "OK":

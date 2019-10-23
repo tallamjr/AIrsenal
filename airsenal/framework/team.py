@@ -70,7 +70,6 @@ class Team(object):
         num_players = sum(self.num_position.values())
         return num_players == 15
 
-
     def add_player(self, p,
                    price=None,
                    season=CURRENT_SEASON,
@@ -84,10 +83,10 @@ class Team(object):
         current price as found in DB, but if one is specified, we override
         with that value.
         """
-        if isinstance(p,int) or isinstance(p,str) or isinstance(p, Player):
+        if isinstance(p, int) or isinstance(p, str) or isinstance(p, Player):
             player = CandidatePlayer(p, season, gameweek,
                                      dbsession=dbsession)
-        else: # already a CandidatePlayer (or an equivalent test class)
+        else:   # already a CandidatePlayer (or an equivalent test class)
             player = p
         # set the price if one was specified.
         if price:
@@ -122,7 +121,6 @@ class Team(object):
         self.budget -= player.current_price
         return True
 
-
     def remove_player(self, player_id, price=None):
         """
         Remove player from our list.
@@ -140,7 +138,6 @@ class Team(object):
                 return True
         return False
 
-
     def check_no_duplicate_player(self, player):
         """
         Check we don't already have the player.
@@ -149,7 +146,6 @@ class Team(object):
             if p.player_id == player.player_id:
                 return False
         return True
-
 
     def check_num_in_position(self, player):
         """
@@ -201,12 +197,11 @@ class Team(object):
                 points_prediction = p.predicted_points[tag][gameweek]
 
             except(KeyError):
-                ## player does not have a game in this gameweek
+                # player does not have a game in this gameweek
                 points_prediction = 0
             player_dict[p.position].append((p, points_prediction))
         for v in player_dict.values():
             v.sort(key=itemgetter(1), reverse=True)
-
 
         # always start the first-placed and sub the second-placed keeper
         player_dict["GK"][0][0].is_starting = True

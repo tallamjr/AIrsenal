@@ -2,12 +2,9 @@
 functions to optimize the transfers for N weeks ahead
 """
 
-import os
-import sys
-
-
 import random
 from datetime import datetime
+from copy import copy
 
 from .utils import *
 from .schema import TransferSuggestion, PlayerPrediction
@@ -35,14 +32,14 @@ def generate_transfer_strategies(gw_ahead, free_transfers=1, max_total_hit=None,
     """
     next_gw = get_next_gameweek()
     strategy_list = []
-    if not (allow_wildcard or allow_free_hit) :
+    if not (allow_wildcard or allow_free_hit):
         possibilities = list(range(4)) if free_transfers > 1 else list(range(3))
         strategies = [
             ({next_gw: i}, 4 * (max(0, i - (1 + int(free_transfers > 1)))))
             for i in possibilities
         ]
-    else :
-        possibilities = [0,1]
+    else:
+        possibilities = [0, 1]
         if allow_wildcard:
             possibilities.append("W")
         if allow_free_hit:
@@ -55,31 +52,31 @@ def generate_transfer_strategies(gw_ahead, free_transfers=1, max_total_hit=None,
     for gw in range(next_gw + 1, next_gw + gw_ahead):
         new_strategies = []
         for s in strategies:
-            ## s is a tuple ( {gw: num_transfer, ...} , points_hit)
+            # s is a tuple ( {gw: num_transfer, ...} , points_hit)
             if (not allow_wildcard) and (not allow_free_hit):
                 possibilities = list(range(4)) if s[0][gw - 1] == 0 else list(range(3))
             else:
                 already_used_wildcard = "W" in s[0].values()
                 already_used_free_hit = "F" in s[0].values()
-                possibilities = [0,1]
+                possibilities = [0, 1]
                 if allow_wildcard and (not already_used_wildcard) \
-                   and (not s[0][gw-1]=="F"):
+                   and (not s[0][gw - 1] == "F"):
                     possibilities.append("W")
                 if allow_free_hit and not already_used_free_hit:
                     possibilities.append("F")
             hit_so_far = s[1]
             for p in possibilities:
-                ## make a copy of the strategy up to this point, then add on the next gw
+                # make a copy of the strategy up to this point, then add on the next gw
                 new_dict = {}
-                ## fill with all the gameweeks up to the one being considered
+                # fill with all the gameweeks up to the one being considered
                 for k, v in s[0].items():
                     new_dict[k] = v
-                ## now fill the gw being considered
+                # now fill the gw being considered
                 new_dict[gw] = p
                 if (not allow_wildcard) and (not allow_free_hit):
                     new_hit = hit_so_far + 4 * (max(0, p - (1 + int(s[0][gw - 1] == 0))))
                 else:
-                    new_hit = 0  ## never take any hit if we're doing the wildcard or free hit.
+                    new_hit = 0  # never take any hit if we're doing the wildcard or free hit.
                 new_strategies.append((new_dict, new_hit))
         strategies = new_strategies
     if max_total_hit:
@@ -99,8 +96,8 @@ def get_starting_team():
         if trans.bought_or_sold == -1:
             t.remove_player(trans.player_id, price=trans.price)
         else:
-            ## within an individual transfer we can violate the budget and team constraints,
-            ## as long as the final team for that gameweek obeys them
+            # within an individual transfer we can violate the budget and team constraints,
+            # as long as the final team for that gameweek obeys them
             t.add_player(trans.player_id, price=trans.price, check_budget=False, check_team=False)
     return t
 
@@ -144,8 +141,8 @@ def make_optimum_transfer(team, tag, gameweek_range=None, season=CURRENT_SEASON,
         )
     for p_out in team.players:
         if update_func_and_args:
-            ## call function to update progress bar.
-            ## this was passed as a tuple (func, increment, pid)
+            # call function to update progress bar.
+            # this was passed as a tuple (func, increment, pid)
             update_func_and_args[0](update_func_and_args[1],
                                     update_func_and_args[2])
         new_team = copy.deepcopy(team)
@@ -429,21 +426,21 @@ def apply_strategy(strat, tag,
         "cards_played": {}
     }
     new_team = copy.deepcopy(starting_team)
-    ## If we use "free hit" card, we need to remember the team from the week before it
+    # If we use "free hit" card, we need to remember the team from the week before it
     team_before_free_hit = None
     for igw, gw in enumerate(gameweeks):
-        ## how many gameweeks ahead should we look at for the purpose of estimating points?
+        # how many gameweeks ahead should we look at for the purpose of estimating points?
         gw_range = gameweeks[igw:]  # range of gameweeks to end of window
 
-        ## if we used a free hit in the previous gw, we will have stored the previous team, so
-        ## we go back to that one now.
+        # if we used a free hit in the previous gw, we will have stored the previous team, so
+        # we go back to that one now.
         if team_before_free_hit:
             new_team = copy.deepcopy(team_before_free_hit)
             team_before_free_hit = None
 
-        ## process this gameweek
+        # process this gameweek
         if strat[0][gw] == 0:  # no transfers that gameweek
-            rp, ap = [], []  ## lists of removed-players, added-players
+            rp, ap = [], []  # lists of removed-players, added-players
         elif strat[0][gw] == 1:  # one transfer - choose optimum
             new_team, rp, ap = make_optimum_transfer(
                 new_team,
@@ -452,24 +449,24 @@ def apply_strategy(strat, tag,
                 update_func_and_args=update_func_and_args
             )
         elif strat[0][gw] == 2:
-            ## two transfers - choose optimum
+            # two transfers - choose optimum
             new_team, rp, ap = make_optimum_double_transfer(
                 new_team,
                 tag,
                 gw_range,
                 update_func_and_args=update_func_and_args
             )
-        elif strat[0][gw] == "W":   ## wildcard - a whole new team!
+        elif strat[0][gw] == "W":  # wildcard - a whole new team!
             rp = [p.player_id for p in new_team.players]
             budget = new_team.budget + get_team_value(new_team)
             new_team = make_new_team(budget, num_iter, tag, gw_range,
                                      update_func_and_args=update_func_and_args)
             ap = [p.player_id for p in new_team.players]
 
-        elif strat[0][gw] == "F":   ## free hit - a whole new team!
-            ## remember the starting team (so we can revert to it later)
+        elif strat[0][gw] == "F":  # free hit - a whole new team!
+            # remember the starting team (so we can revert to it later)
             team_before_free_hit = copy.deepcopy(new_team)
-            ## now make a new team for this gw, as is done for wildcard
+            # now make a new team for this gw, as is done for wildcard
             rp = [p.player_id for p in new_team.players]
             budget = new_team.budget + get_team_value(new_team)
             new_team = make_new_team(budget, num_iter, tag, gw_range,
@@ -483,16 +480,16 @@ def apply_strategy(strat, tag,
                 update_func_and_args=update_func_and_args
             )
         score = new_team.get_expected_points(gw, tag)
-        ## if we're ever >5 points below the baseline, bail out!
+        # if we're ever >5 points below the baseline, bail out!
         strategy_output["total_score"] += score
         if baseline_dict and baseline_dict[gw] - strategy_output["total_score"] > 5:
             break
         strategy_output["points_per_gw"][gw] = score
-        ## record whether we're playing wildcard or free hit this gameweek
-        strategy_output["cards_played"][gw] = strat[0][gw] if isinstance(strat[0][gw],str) else None
+        # record whether we're playing wildcard or free hit this gameweek
+        strategy_output["cards_played"][gw] = strat[0][gw] if isinstance(strat[0][gw], str) else None
         strategy_output["players_in"][gw] = ap
         strategy_output["players_out"][gw] = rp
-        ## end of loop over gameweeks
+        # end of loop over gameweeks
     if strategy_output["total_score"] > best_score:
         best_score = strategy_output["total_score"]
         best_strategy_output = strategy_output
@@ -530,7 +527,7 @@ def strategy_involves_N_or_more_transfers_in_gw(strategy, N):
     """
     strat_dict = strategy[0]
     for v in strat_dict.values():
-        if isinstance(v,int) and v >= N:
+        if isinstance(v, int) and v >= N:
             return True
     return False
 
